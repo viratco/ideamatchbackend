@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: idea-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    rootDir: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Add other env vars as needed or use Render's dashboard

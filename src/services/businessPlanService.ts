@@ -6,7 +6,6 @@ interface MarketShareData {
   value: number;
 }
 
-
 type SwotCategory = 'strengths' | 'weaknesses' | 'opportunities' | 'threats';
 
 interface SwotAnalysisResponse {
@@ -216,10 +215,6 @@ export interface MarketSizeResponse {
   marketSizeData: MarketSizeData[];
 }
 
-export interface CustomerValidationResponse {
-  validationText: string;
-}
-
 export interface ProductFeature {
   title: string;
   description: string;
@@ -253,7 +248,6 @@ export interface BusinessPlanResponse {
   swot: any;
   competitorAnalysis: any;
   marketSize: any;
-  customerValidation: any;
   productOffering: any;
   solutionDetails: any;
   subscriptionPlans: any;
@@ -520,129 +514,6 @@ Provide the response in this EXACT format (no additional text or formatting):
   }
 };
 
-export const generateCustomerValidation = async (params: BusinessPlanData): Promise<CustomerValidationResponse> => {
-  try {
-    console.log('Generating customer validation for:', params.title);
-    
-    const prompt = `Generate a concise customer validation paragraph for this business idea:
-
-Title: ${params.title}
-Idea Fitness Assessment: ${params.ideaFitness}
-
-Provide a realistic, data-driven summary (max 3-5 lines, no more than 80 words) about preliminary market research that includes:
-- Number of interviews/surveys conducted
-- Types of potential customers interviewed
-- Key statistics about interest level
-- Specific pricing/value insights
-
-Format the response as JSON ONLY (no markdown, no code blocks, no comments, no extra text):
-{
-  "validationText": "Our preliminary market research...",
-  "mvpFeatures": ["...", "..."],
-  "differentiation": ["...", "..."],
-  "revenueModel": {"primary": "...", "secondary": "..."},
-  "scalabilityPlan": ["...", "..."],
-  "deepInsights": {
-    "marketDemand": "...",
-    "technologicalFeasibility": "...",
-    "customerRetention": "...",
-    "growthStrategy": "..."
-  }
-}
-
-STRICT JSON RULES:
-- NO trailing commas
-- NO duplicate keys
-- NO missing or extra brackets
-- NO markdown/code blocks/comments
-- NO repeated fields
-- All arrays/objects must be valid JSON
-- Output ONLY the JSON object, nothing else
-- If you are unsure, validate your output as JSON
-
-If any field is missing or the JSON is invalid, regenerate until correct.`;
-
-    const response = await makeOpenRouterRequest([
-      {
-        role: 'system',
-        content: 'You are a market research analyst. Generate realistic customer validation summaries with specific data points. Output in JSON format only.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]);
-
-    console.log('Raw AI response:', response?.choices?.[0]?.message?.content);
-
-    if (!response?.choices?.[0]?.message?.content) {
-      throw new Error('Invalid or empty response');
-    }
-
-    const content = response.choices[0].message.content.trim();
-    let parsedContent: CustomerValidationResponse;
-
-    // --- Bulletproof JSON repair logic ---
-    function sanitizeAndRepairJson(raw: string): string {
-      let s = raw;
-      // Remove markdown/code block markers
-      s = s.replace(/```[a-zA-Z]*\n?|```/g, '');
-      // Remove comments
-      s = s.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '');
-      // Remove trailing commas before } or ]
-      s = s.replace(/,\s*([}\]])/g, '$1');
-      // Remove duplicate keys (keep last)
-      s = s.replace(/"([^"]+)":([\s\S]*?)"\1":/g, '');
-      // Remove repeated fields (keep last)
-      // (simple, not perfect)
-      s = s.replace(/("[^"]+":\s*[^,}\]]+,)(\s*"[^"]+":)/g, '$2');
-      // Remove extra/missing brackets (try to balance)
-      let open = (s.match(/\{/g) || []).length;
-      let close = (s.match(/\}/g) || []).length;
-      if (open > close) s += '}'.repeat(open - close);
-      if (close > open) s = s.replace(/\}$/g, (m, i, str) => i >= str.length - (close - open) ? '' : m);
-      return s.trim();
-    }
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      let jsonStr = jsonMatch ? jsonMatch[0] : content;
-      let cleanedContent = sanitizeAndRepairJson(jsonStr);
-      try {
-        parsedContent = safeJsonParse(cleanedContent);
-      } catch (e) {
-        // Second attempt: sanitize again, try to repair
-        cleanedContent = sanitizeAndRepairJson(cleanedContent);
-        parsedContent = safeJsonParse(cleanedContent);
-      }
-      if (!parsedContent.validationText || typeof parsedContent.validationText !== 'string') {
-        // Fallback: try to find any string property containing 'validation' in the key
-        const parsedRecord = parsedContent as Record<string, any>;
-        const fallbackKey = Object.keys(parsedRecord).find(k => k.toLowerCase().includes('validation') && typeof parsedRecord[k] === 'string');
-        if (fallbackKey) {
-          parsedContent.validationText = parsedRecord[fallbackKey];
-        } else {
-          // Log for debugging
-          console.error('customerValidation parse failure', {parsedContent, raw: content, sanitized: cleanedContent});
-          // Instead of throwing, return fallback object
-          return { validationText: 'Customer validation data unavailable.' } as CustomerValidationResponse;
-        }
-      }
-      if (parsedContent.validationText.trim().length === 0) {
-        throw new Error('Validation text is empty');
-      }
-      return parsedContent;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to parse customer validation:', errorMessage, { rawContent: content });
-      throw new Error(`Failed to parse customer validation: ${errorMessage}`);
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error generating customer validation:', errorMessage, { error });
-    throw new Error(`Failed to generate customer validation: ${errorMessage}`);
-  }
-};
-
 export const generateMarketSize = async (params: BusinessPlanData): Promise<MarketSizeResponse> => {
   try {
     console.log('Generating market size projections for:', params.title);
@@ -742,8 +613,6 @@ Ensure:
 
 export const generateProblemOpportunity = async (params: BusinessPlanData): Promise<ProblemOpportunityResponse> => {
   try {
-    console.log('Generating problem and opportunity statements for:', params.title);
-    
     const prompt = `Based on this business idea, generate two lists of bullet points for a business plan:
 
 Title: ${params.title}
@@ -897,7 +766,6 @@ export const generateBusinessPlan = async (params: BusinessPlanData): Promise<Bu
       case 'swot':
       case 'competitorAnalysis':
       case 'marketSize':
-      case 'customerValidation':
       case 'productOffering':
       case 'solutionDetails':
       case 'subscriptionPlans':
@@ -915,7 +783,6 @@ export const generateBusinessPlan = async (params: BusinessPlanData): Promise<Bu
     let swot = {};
     let competitorAnalysis = {};
     let marketSize = {};
-    let customerValidation = {};
     let productOffering = {};
     let solutionDetails = {};
     let subscriptionPlans = {};
@@ -946,15 +813,13 @@ export const generateBusinessPlan = async (params: BusinessPlanData): Promise<Bu
     try { competitorAnalysis = await generateCompetitorAnalysis(params); } catch (e) { console.error('Failed to generate competitorAnalysis', e); competitorAnalysis = {}; }
     // 6. Market Size
     try { marketSize = await generateMarketSize(params); } catch (e) { console.error('Failed to generate marketSize', e); marketSize = {}; }
-    // 7. Customer Validation
-    try { customerValidation = parseIfString(await generateCustomerValidation(params)); } catch (e) { console.error('Failed to generate customerValidation', e); customerValidation = {}; }
-    // 8. Product Offering
+    // 7. Product Offering
     try { productOffering = parseIfString(await generateProductOffering(params)); } catch (e) { console.error('Failed to generate productOffering', e); productOffering = {}; }
-    // 9. Solution Details
+    // 8. Solution Details
     try { solutionDetails = parseIfString(await generateSolutionDetails(params)); } catch (e) { console.error('Failed to generate solutionDetails', e); solutionDetails = {}; }
-    // 10. Subscription Plans
+    // 9. Subscription Plans
     try { subscriptionPlans = parseIfString(await generateSubscriptionPlans(params)); } catch (e) { console.error('Failed to generate subscriptionPlans', e); subscriptionPlans = {}; }
-    // 11. Growth Projections
+    // 10. Growth Projections
     try { growthProjections = parseIfString(await generateGrowthProjections(params)); } catch (e) { console.error('Failed to generate growthProjections', e); growthProjections = {}; }
     // Always return all required fields, filling missing with defaults
     const requiredFields = {
@@ -965,7 +830,6 @@ export const generateBusinessPlan = async (params: BusinessPlanData): Promise<Bu
       swot,
       competitorAnalysis,
       marketSize,
-      customerValidation,
       productOffering,
       solutionDetails,
       subscriptionPlans,
@@ -994,7 +858,6 @@ export const generateBusinessPlan = async (params: BusinessPlanData): Promise<Bu
       swot: {},
       competitorAnalysis: {},
       marketSize: {},
-      customerValidation: {},
       productOffering: {},
       solutionDetails: {},
       subscriptionPlans: {},
@@ -1907,36 +1770,39 @@ Rules:
     const content = response.choices[0].message.content;
     console.log('Raw AI response:', content);
 
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    const cleanedContent = jsonMatch ? jsonMatch[0].replace(/^```json\n|\n```$/g, '').trim() : content.trim();
-
-    if (!cleanedContent) {
-      throw new Error('Empty content after cleaning response');
+    // Extract only the JSON object up to the end of the threats array
+    const jsonStart = content.indexOf('{');
+    const threatsKey = '"threats"';
+    const threatsIndex = content.indexOf(threatsKey, jsonStart);
+    let jsonString = '';
+    if (jsonStart !== -1 && threatsIndex !== -1) {
+      // Find the start and end of the threats array
+      const threatsArrayStart = content.indexOf('[', threatsIndex);
+      const threatsArrayEnd = content.indexOf(']', threatsArrayStart);
+      if (threatsArrayEnd !== -1) {
+        // Find the closing } after threats array
+        const jsonEnd = content.indexOf('}', threatsArrayEnd);
+        if (jsonEnd !== -1) {
+          jsonString = content.substring(jsonStart, jsonEnd + 1);
+        }
+      }
     }
+    if (!jsonString) {
+      throw new Error('Could not extract valid SWOT JSON from response');
+    }
+    console.log('Extracted SWOT JSON:', jsonString);
 
-    let parsedResponse: CompetitorAnalysis;
     try {
-      parsedResponse = JSON.parse(cleanedContent) as CompetitorAnalysis;
+      const parsedResponse = JSON.parse(jsonString) as CompetitorAnalysis;
 
+      // Validate the structure
       if (!parsedResponse || typeof parsedResponse !== 'object') {
         throw new Error('Invalid response format: not a JSON object');
       }
 
+      // Validate each competitor
       if (!Array.isArray(parsedResponse.competitors) || parsedResponse.competitors.length !== 3) {
         throw new Error('Invalid response: Must have exactly 3 competitors');
-      }
-
-      // Validate each competitor
-      parsedResponse.competitors.forEach((competitor, index) => {
-        if (!competitor.name || !competitor.description || !Array.isArray(competitor.strengths) || !Array.isArray(competitor.weaknesses)) {
-          throw new Error(`Invalid competitor data for competitor ${index + 1}`);
-        }
-      });
-
-      // Ensure no duplicates
-      const names = new Set(parsedResponse.competitors.map(c => c.name));
-      if (names.size !== parsedResponse.competitors.length) {
-        throw new Error('Duplicate competitor names found');
       }
 
       // Validate competitors and comparison data

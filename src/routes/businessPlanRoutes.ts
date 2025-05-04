@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { authenticateJWT, AuthRequest } from '../middleware/authMiddleware';
+import { 
+  authenticateJWT, 
+  AuthRequest 
+} from '../middleware/authMiddleware';
 import { 
   generateBusinessPlan, 
   generateProblemOpportunity, 
   generateMarketSize, 
-  generateCustomerValidation, 
   generateProductOffering, 
   generateSolutionDetails, 
   generateSubscriptionPlans,
@@ -102,33 +104,6 @@ router.post('/market-size', function(req: Request, res: Response) {
       console.error('Error in /api/business-plan/market-size:', error);
       res.status(500).json({ 
         message: error.message || 'Failed to generate market size data'
-      });
-    }
-  };
-  
-  handleRequest();
-});
-
-router.post('/customer-validation', function(req: Request, res: Response) {
-  const handleRequest = async () => {
-    try {
-      if (!req.body.title || !req.body.ideaFitness) {
-        return res.status(400).json({
-          message: 'Title and idea fitness assessment are required'
-        });
-      }
-
-      const params = {
-        title: req.body.title,
-        ideaFitness: req.body.ideaFitness
-      };
-
-      const result = await generateCustomerValidation(params);
-      res.json(result);
-    } catch (error: any) {
-      console.error('Error in /api/business-plan/customer-validation:', error);
-      res.status(500).json({ 
-        message: error.message || 'Failed to generate customer validation'
       });
     }
   };

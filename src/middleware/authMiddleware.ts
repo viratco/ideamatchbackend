@@ -17,9 +17,9 @@ export function authenticateJWT(req: AuthRequest, res: Response, next: NextFunct
   }
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { user_id?: string, id?: string, exp?: number };
+    const decoded = jwt.verify(token, JWT_SECRET) as { user_id?: string, id?: string, sub?: string, exp?: number };
     console.log('Decoded JWT payload:', decoded);
-    req.userId = decoded.user_id || decoded.id;
+    req.userId = decoded.sub || decoded.user_id || decoded.id;
     console.log('Resolved userId:', req.userId);
     if (!req.userId) {
       return res.status(401).json({ error: 'Token does not contain user id. Please log in again.' });

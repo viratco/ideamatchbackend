@@ -8,7 +8,7 @@ const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 10000; // 10s base delay for retries
 const RATE_LIMIT_REQUESTS = 2; // 2 requests per minute
 const MIN_DELAY_MS = Math.ceil((60 * 1000) / RATE_LIMIT_REQUESTS); // 30000ms (30s)
-const REQUEST_TIMEOUT = 30000; // 30s timeout
+const REQUEST_TIMEOUT = 60000; // 60s timeout
 const MAX_CONCURRENT_REQUESTS = 2; // Limit concurrent requests
 
 // Request queue and lock
@@ -85,7 +85,7 @@ const processNextRequest = async () => {
         model,
         messages,
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 4096,
         stream: false
       },
       {
